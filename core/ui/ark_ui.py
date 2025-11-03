@@ -91,13 +91,13 @@ class ArkUI:
             elif event.type == pygame.KEYDOWN:
                 # print(f"event {event.key}")
                 if event.key == pygame.K_SPACE:
-                    print(f"pressed space")
+                    print("pressed space")
                     # self.paused = not self.paused
                 elif event.key == pygame.K_RIGHT and self.paused:
-                    print(f"pressed right")
+                    print("pressed right")
                     # self.step_simulation()
                 elif event.key == pygame.K_d:  # NEW: Toggle debug mode
-                    print(f"toggle debug mode")
+                    print("toggle debug mode")
                 #     self.debug_mode = not self.debug_mode
 
     def run(self) -> dict:

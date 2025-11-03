@@ -39,7 +39,6 @@ class Engine:
 
         return in_sight
 
-
     def run_turn(self, time_elapsed: int) -> None:
         is_raining = time_elapsed >= self.time - c.START_RAIN
         ark_view = self.ark.get_view()
@@ -98,9 +97,7 @@ class Engine:
                     cell = self.grid[helper_y][helper_x]
 
                     if a not in helper.flock:
-                        raise Exception(
-                            f"animal {a} not in helper {helper.id}'s flock"
-                        )
+                        raise Exception(f"animal {a} not in helper {helper.id}'s flock")
 
                     helper.flock.remove(a)
                     self.free_animals[a] = cell
