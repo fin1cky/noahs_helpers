@@ -128,12 +128,11 @@ class ArkUI:
         )
         ark_rect = ark_img.get_rect(center=ark_center)
         self.screen.blit(ark_img, ark_rect)
-        # pygame.draw.circle(self.screen, c.ARK_COLOR, ark_center, c.ARK_RADIUS)
 
         key = (ark_center, c.ARK_RADIUS)
         self.drawn_objects[key] = self.engine.ark
 
-    def draw_hovered_ark(self, pos: tuple[int, int], animals: set[Animal]):
+    def render_hover_view(self, title: str):
         cw = int(c.SCREEN_WIDTH / 2)
         ch = int(c.SCREEN_HEIGHT / 2)
 
@@ -146,9 +145,20 @@ class ArkUI:
             c.HOVERED_WIDTH,
             c.HOVERED_HEIGHT,
         )
+        overlay = pygame.Surface(rect.size, pygame.SRCALPHA)
 
-        pygame.draw.rect(self.screen, c.BG_COLOR, rect)
-        self.write_at(self.big_font, "ARK", (cw, ch - int(c.HOVERED_HEIGHT / 2) + 15))
+        pygame.draw.rect(
+            overlay, (*c.BG_COLOR, 240), overlay.get_rect(), border_radius=10
+        )
+        self.screen.blit(overlay, rect.topleft)
+        pygame.draw.rect(self.screen, (0, 0, 0), rect, width=1, border_radius=10)
+
+        self.write_at(self.big_font, title, (cw, ch - int(c.HOVERED_HEIGHT / 2) + 15))
+
+        return left, top
+
+    def draw_hovered_ark(self, pos: tuple[int, int], animals: set[Animal]):
+        left, top = self.render_hover_view("ARK")
 
         margined_x = left + c.HOVERED_MARGIN_X
         self.write_at(
@@ -202,6 +212,37 @@ class ArkUI:
             )
             self.drawn_objects[(helper_center, c.HELPER_RADIUS)] = helper
 
+    def draw_hovered_helper(
+        self, id: int, position: tuple[float, float], flock: set[Animal]
+    ):
+        left, top = self.render_hover_view(f"Helper {id}")
+
+        y = top + c.MARGIN_Y
+
+        margined_x = left + c.HOVERED_MARGIN_X
+        self.write_at(
+            self.small_font,
+            f"pos: ({position[0]:.2f}, {position[1]:.2f})",
+            (margined_x, y),
+            align="left",
+        )
+
+        y += c.MARGIN_Y
+
+        self.write_at(
+            self.small_font,
+            f"Flock",
+            (margined_x, y),
+            align="left",
+        )
+
+        flist = list(flock) + [None] * (c.MAX_FLOCK_SIZE - len(flock))
+        for i in range(c.MAX_FLOCK_SIZE):
+            y += 30
+            self.write_at(
+                self.small_font, f"{i}: {flist[i]}", (margined_x + 10, y), align="left"
+            )
+
     def draw_animals(self):
         for animal, cell in self.engine.free_animals.items():
             animal_center = coords_to_px(cell.x, cell.y)
@@ -222,20 +263,59 @@ class ArkUI:
 
             self.drawn_objects[(animal_center, c.ANIMAL_RADIUS)] = animal
 
+    def draw_hovered_animal(self, sid: int, gender: Gender, pos: tuple[int, int]):
+        left, top = self.render_hover_view("Animal")
+
+        y = top + c.MARGIN_Y
+
+        margined_x = left + c.HOVERED_MARGIN_X
+        self.write_at(
+            self.small_font,
+            f"pos: {pos}",
+            (margined_x, y),
+            align="left",
+        )
+
+        y += c.MARGIN_Y
+
+        self.write_at(
+            self.small_font,
+            f"species_id: {sid}",
+            (margined_x, y),
+            align="left",
+        )
+
+        y += c.MARGIN_Y
+
+        color = c.MALE_ANIMAL_COLOR if gender == Gender.Male else c.FEMALE_ANIMAL_COLOR
+
+        self.write_at(
+            self.small_font,
+            f"gender: {gender}",
+            (margined_x, y),
+            align="left",
+            color=color,
+        )
+
     def draw_if_hovered(self):
         pos = pygame.mouse.get_pos()
 
-        for (center, radius), object in self.drawn_objects.items():
+        best_obj = None
+        smallest_radius = -1
+        for (center, radius), obj in self.drawn_objects.items():
             if is_hovered_circle(pos, center, radius):
+                if best_obj is None or radius < smallest_radius:
+                    best_obj = obj
+                    smallest_radius = radius
 
-                match object:
-                    case Ark(position=p, animals=a):
-                        self.draw_hovered_ark(p, a)
-                    case Player(id=id, position=p, flock=f):
-                        print(f"hovering PLAYER, id={id}, pos={p}, flock={f}")
-                    case Animal(species_id=s, gender=g):
-                        print(f"hovering ANIMAL, species_id={s}, gender={g}")
-                break
+        match best_obj:
+            case Ark(position=p, animals=a):
+                self.draw_hovered_ark(p, a)
+            case Player(id=id, position=p, flock=f):
+                self.draw_hovered_helper(id, p, f)
+            case Animal(species_id=sid, gender=g):
+                cell = self.engine.free_animals[best_obj]
+                self.draw_hovered_animal(sid, g, (cell.x, cell.y))
 
     def draw_objects(self):
         self.drawn_objects.clear()
@@ -283,14 +363,14 @@ class ArkUI:
                 f"{num_male}M",
                 (info_pane_x + 60, y),
                 align="left",
-                color=c.MALE_ANIMAL_COLOR
+                color=c.MALE_ANIMAL_COLOR,
             )
             self.write_at(
                 self.big_font,
                 f"{num_female}F",
                 (info_pane_x + 110, y),
                 align="left",
-                color=c.FEMALE_ANIMAL_COLOR
+                color=c.FEMALE_ANIMAL_COLOR,
             )
 
     def draw_debug_helper_screens(self):
