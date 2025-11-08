@@ -53,6 +53,9 @@ class ArkUI:
             self.engine.ark.position[1] // (c.Y // c.MAP_SPLIT),
         )
 
+        self.hz = c.DEFAULT_TURNS_PER_SECOND
+        self.hzs = c.ALL_TURNS_PER_SECOND
+
     def coords_fit_in_grid(self, x: float, y: float) -> bool:
         west_x, east_x, north_y, south_y = self.get_w_e_n_s()
 
@@ -445,6 +448,16 @@ class ArkUI:
                     self.screen, self.big_font, line, (info_pane_x, y), align="left"
                 )
 
+                if line.startswith("Turn:"):
+                    speed = f"speed: {1 + self.hzs.index(self.hz)}/{len(self.hzs)}"
+                    write_at(
+                        self.screen,
+                        self.small_font,
+                        speed,
+                        (info_pane_x + 220, y),
+                        align="left",
+                    )
+
         if self.engine.time_elapsed == self.engine.time:
             org_score = self.engine.ark.get_score()
             deduct = not all([helper.is_in_ark() for helper in self.engine.helpers])
@@ -585,6 +598,13 @@ class ArkUI:
                     sel_row, sel_col = self.selected_cell
                     self.selected_cell = (sel_row, (sel_col - 1) % c.MAP_SPLIT)
 
+                elif event.key == pygame.K_1:
+                    self.hz = self.hzs[0]
+                elif event.key == pygame.K_2:
+                    self.hz = self.hzs[1]
+                elif event.key == pygame.K_3:
+                    self.hz = self.hzs[2]
+
             elif pygame.key.get_pressed()[pygame.K_PERIOD] and self.paused:
                 self.step_simulation()
 
@@ -604,7 +624,7 @@ class ArkUI:
                 self.step_simulation()
 
             pygame.display.flip()
-            self.clock.tick(60)
+            self.clock.tick(self.hz)
 
         pygame.quit()
 
