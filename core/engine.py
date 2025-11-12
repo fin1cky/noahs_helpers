@@ -7,6 +7,7 @@ from core.ark import Ark
 from core.message import Message
 from core.player import Player
 from core.cell import Cell
+from core.player_info import PlayerInfo
 from core.sight import Sight
 from core.snapshots import HelperSurroundingsSnapshot
 from core.timer import Timer
@@ -21,6 +22,7 @@ class Engine:
         grid: list[list[Cell]],
         ark: Ark,
         helpers: list[Player],
+        info_helpers: dict[PlayerInfo, Player],
         time: int,
         animals: dict[Animal, Cell],
         species_stats: dict[int, list[int]],
@@ -28,6 +30,7 @@ class Engine:
         self.grid = grid
         self.ark = ark
         self.helpers = helpers
+        self.info_helpers = info_helpers
         self.time = time
         self.free_animals = animals
         self.species_stats = species_stats
@@ -40,7 +43,7 @@ class Engine:
     def _get_sights(self) -> dict[Player, list[Player]]:
         in_sight: dict[Player, list[Player]] = {helper: [] for helper in self.helpers}
 
-        for i, helper in enumerate(self.helpers):
+        for i, (hi, helper) in enumerate(self.info_helpers.items()):
             for j in range(i + 1, len(self.helpers)):
                 neighbor = self.helpers[j]
                 if helper.distance(neighbor) <= c.MAX_SIGHT_KM:
@@ -75,8 +78,8 @@ class Engine:
         # Tracks the total time consumed by the player
         timer = Timer()
 
-        for helper in self.helpers:
-            sight = Sight(helper.position, self.grid)
+        for hi, helper in self.info_helpers.items():
+            sight = Sight((hi.x, hi.y), self.grid)
 
             helper_ark_view = None
             if helper.is_in_ark():
@@ -85,8 +88,9 @@ class Engine:
             snapshot = HelperSurroundingsSnapshot(
                 self.time_elapsed,
                 is_raining,
-                helper.position,
+                (hi.x, hi.y),
                 sight,
+                hi.flock.copy(),
                 helper_ark_view,
                 timer.copy(),
             )
@@ -112,66 +116,78 @@ class Engine:
         # a obtain and/or release animals in their sight
         # b move in any direction
 
-        obtained: dict[Animal, list[Player]] = {}
-        for helper in self.helpers:
+        obtained: dict[Animal, list[PlayerInfo]] = {}
+        for hi, helper in self.info_helpers.items():
             last = perf_counter()
             action = helper.get_action(messages_to[helper])
             timer.consumed += perf_counter() - last
 
-            if helper.kind == Kind.Noah and action is not None:
+            if hi.kind == Kind.Noah and action is not None:
                 raise Exception("Noah shouldn't perform an action")
 
             match action:
                 case Release(animal=a):
-                    helper_x, helper_y = tuple(map(int, helper.position))
+                    helper_x, helper_y = int(hi.x), int(hi.y)
                     cell = self.grid[helper_y][helper_x]
 
-                    if a not in helper.flock:
-                        raise Exception(f"animal {a} not in helper {helper.id}'s flock")
+                    if a not in hi.flock:
+                        raise Exception(f"animal {a} not in helper {hi.id}'s flock")
 
-                    helper.flock.remove(a)
+                    hi.flock.remove(a)
                     self.free_animals[a] = cell
                     cell.animals.add(a)
 
                 case Obtain(animal=a):
-                    helper_x, helper_y = tuple(map(int, helper.position))
+                    helper_x, helper_y = int(hi.x), int(hi.y)
                     helper_cell = self.grid[helper_y][helper_x]
 
-                    if len(helper.flock) >= c.MAX_FLOCK_SIZE:
+                    if len(hi.flock) >= c.MAX_FLOCK_SIZE:
                         raise Exception(
-                            f"helper {helper.id} tried to obtain animal with full flock"
+                            f"helper {hi.id} tried to obtain animal with full flock"
                         )
 
                     if a not in helper_cell.animals:
                         raise Exception(
-                            f"animal {a}, (hash={a.__hash__()}, id={id(a)}) not in helper {helper.id}'s cell {(helper_x, helper_y)}"
+                            f"animal {a}, (hash={a.__hash__()}, id={id(a)}) not in helper {hi.id}'s cell {(helper_x, helper_y)}"
                         )
 
                     if a not in obtained:
                         obtained[a] = []
-                    obtained[a].append(helper)
+                    obtained[a].append(hi)
 
                 case Move(x=x, y=y):
                     if not helper.can_move_to(x, y):
                         raise Exception(
-                            f"player cannot move from {helper.position} to {(x, y)}"
+                            f"player cannot move from {hi.x, hi.y} to {(x, y)}"
                         )
 
-                    helper.position = (x, y)
+                    x_cell, y_cell = int(x), int(y)
+                    target_cell = self.grid[y_cell][x_cell]
+
+                    x_curr_cell, y_curr_cell = int(hi.x), int(hi.y)
+                    curr_cell = self.grid[y_curr_cell][x_curr_cell]
+
+                    if (x_cell, y_cell) != (x_curr_cell, y_curr_cell):
+                        curr_cell.helpers.remove(hi)
+                        target_cell.helpers.add(hi)
+
+                    print(f"{helper.get_short_name()}: moving from {hi.x, hi.y} to {x, y}")
+                    hi.x = x
+                    hi.y = y
 
                     # offload helper's flock to ark
                     if helper.is_in_ark():
-                        self.ark.animals = self.ark.animals.union(helper.flock)
-                        helper.flock.clear()
+                        self.ark.animals = self.ark.animals.union(hi.flock)
+                        hi.flock.clear()
 
         # multiple helpers may try to obtain same animal
         # Only one may actually obtain it.
         # This is decided by:
         # 1. helper with min flock size
         # 2. helper with min id
-        for obt_animal, helpers in obtained.items():
-            best_helper = min(helpers, key=lambda h: (len(h.flock), h.id))
-            helper_x, helper_y = tuple(map(int, best_helper.position))
+        for obt_animal, his in obtained.items():
+            best_helper = min(his, key=lambda h: (len(h.flock), h.id))
+            helper_x, helper_y = int(best_helper.x), int(best_helper.y)
             helper_cell = self.grid[helper_y][helper_x]
 
             helper_cell.animals.remove(obt_animal)

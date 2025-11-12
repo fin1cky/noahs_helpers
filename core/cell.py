@@ -1,8 +1,9 @@
 from __future__ import annotations
+from random import shuffle
 
 from core.animal import Animal
+from core.player_info import PlayerInfo
 from core.views.cell_view import CellView
-from core.views.player_view import PlayerView
 
 
 class Cell:
@@ -10,7 +11,7 @@ class Cell:
         self.x = x
         self.y = y
         self.animals: set[Animal] = set()
-        self.helpers: set[PlayerView] = set()
+        self.helpers: set[PlayerInfo] = set()
 
         self.up: Cell | None = None
         self.down: Cell | None = None
@@ -18,10 +19,18 @@ class Cell:
         self.right: Cell | None = None
 
     def get_view(self, make_unknown: bool) -> CellView:
+        shepherded_animals = [
+            a.copy(make_unknown) for h in self.helpers for a in h.flock
+        ]
+
+        all_animals = list(self.animals) + shepherded_animals
+        # ensure readers can't deduce anything from the ordering
+        shuffle(all_animals)
+
         return CellView(
             self.x,
             self.y,
-            {animal.copy(make_unknown) for animal in self.animals},
+            {animal.copy(make_unknown) for animal in all_animals},
             self.helpers,
         )
 

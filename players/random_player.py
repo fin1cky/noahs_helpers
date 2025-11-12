@@ -1,5 +1,3 @@
-from contextlib import contextmanager
-from os import confstr
 from random import random, choice
 
 from core.action import Action, Move, Obtain
@@ -61,7 +59,12 @@ class RandomPlayer(Player):
         return old_x + dx, old_y + dy
 
     def check_surroundings(self, snapshot: HelperSurroundingsSnapshot):
+        # I can't trust that my internal position and flock matches the simulators
+        # For example, I wanted to move in a way that I couldn't
+        # or the animal I wanted to obtain was actually obtained by another helper
         self.position = snapshot.position
+        self.flock = snapshot.flock
+
         self.sight = snapshot.sight
         self.is_raining = snapshot.is_raining
 
@@ -108,7 +111,10 @@ class RandomPlayer(Player):
         # If I see any animals, I'll chase the closest one
         closest_animal = self._find_closest_animal()
         if closest_animal:
-            return Move(*self.move_towards(*closest_animal))
+            c_x, c_y = closest_animal
+            target_cv = self.sight.get_cellview_at(c_x, c_y)
+            if len(target_cv.helpers) == 0:
+                return Move(*self.move_towards(*closest_animal))
 
         # Move in a random direction
         return Move(*self._get_random_move())

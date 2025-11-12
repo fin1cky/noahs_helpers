@@ -6,6 +6,7 @@ from core.animal import Animal, Gender
 from core.ark import Ark
 from core.engine import Engine
 from core.player import Player
+from core.player_info import PlayerInfo
 from core.ui.utils import render_img, write_at
 from core.views.player_view import Kind
 
@@ -45,7 +46,7 @@ class ArkUI:
         self.debug_mode = False
 
         self.drawn_objects: dict[
-            tuple[tuple[float, float], float], Ark | Player | Animal
+            tuple[tuple[float, float], float], Ark | PlayerInfo | Animal
         ] = {}
 
         self.drawn_cells: dict[tuple[tuple[int, int], int], tuple[int, int]] = {}
@@ -298,24 +299,23 @@ class ArkUI:
                 y += 50
 
     def draw_helpers_on_map(self):
-        for helper in self.engine.helpers:
-            helper_x, helper_y = helper.position
+        for hi, helper in self.engine.info_helpers.items():
 
-            helper_center = self.map_coords_to_px(helper_x, helper_y)
+            helper_center = self.map_coords_to_px(hi.x, hi.y)
             helper.draw_on_map(self.screen, helper_center)
 
     def draw_helpers(self):
-        for helper in self.engine.helpers:
-            helper_x, helper_y = helper.position
-            if not self.coords_fit_in_grid(helper_x, helper_y):
+        for hi, helper in self.engine.info_helpers.items():
+            if not self.coords_fit_in_grid(hi.x, hi.y):
                 continue
 
-            helper_center = self.coords_to_px(helper_x, helper_y)
+            helper_center = self.coords_to_px(hi.x, hi.y)
 
             helper.draw(self.screen, self.big_font, helper_center)
-            self.drawn_objects[(helper_center, c.HELPER_RADIUS)] = helper
+            self.drawn_objects[(helper_center, c.HELPER_RADIUS)] = hi
 
-    def draw_hovered_helper(self, helper: Player):
+    def draw_hovered_helper(self, hi: PlayerInfo):
+        helper = self.engine.info_helpers[hi]
         left, top = self.render_hover_view(helper.get_long_name())
 
         y = top + c.MARGIN_Y
@@ -324,13 +324,13 @@ class ArkUI:
         write_at(
             self.screen,
             self.small_font,
-            f"pos: ({helper.position[0]:.2f}, {helper.position[1]:.2f})",
+            f"pos: ({hi.x:.2f}, {hi.y:.2f})",
             (margined_x, y),
             align="left",
         )
 
         # noah doesn't have a flock
-        if helper.kind != Kind.Noah:
+        if hi.kind != Kind.Noah:
             y += c.MARGIN_Y
             write_at(
                 self.screen,
@@ -344,7 +344,7 @@ class ArkUI:
 
         y += c.MARGIN_Y
 
-        last_msg = self.engine.last_messages[helper.id]
+        last_msg = self.engine.last_messages[hi.id]
         if last_msg:
             helper.draw_message(self.screen, self.big_font, (margined_x, y), last_msg)
 
@@ -413,8 +413,8 @@ class ArkUI:
         match best_obj:
             case Ark(position=p):
                 self.draw_hovered_ark(p)
-            case Player() as player:
-                self.draw_hovered_helper(player)
+            case PlayerInfo() as hi:
+                self.draw_hovered_helper(hi)
             case Animal(species_id=sid, gender=g):
                 cell = self.engine.free_animals[best_obj]
                 self.draw_hovered_animal(sid, g, (cell.x, cell.y))
@@ -538,8 +538,8 @@ class ArkUI:
         y = 10
         x = 0
 
-        for helper in self.engine.helpers:
-            if helper.kind == Kind.Noah:
+        for hi, helper in self.engine.info_helpers.items():
+            if hi.kind == Kind.Noah:
                 write_at(
                     helpers_surface,
                     self.big_font,
@@ -559,7 +559,7 @@ class ArkUI:
 
             incr_y = y + c.INFO_HELPER_HEIGHT // 2
 
-            msg = self.engine.last_messages[helper.id]
+            msg = self.engine.last_messages[hi.id]
             if msg:
                 helper.draw_message(helpers_surface, self.small_font, (x, incr_y), msg)
             else:

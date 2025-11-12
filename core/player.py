@@ -6,9 +6,11 @@ from math import hypot
 
 import pygame
 
+from core import animal
 from core.action import Action
 from core.animal import Animal
 from core.message import Message
+from core.player_info import PlayerInfo
 from core.ui.utils import write_at
 from core.snapshots import HelperSurroundingsSnapshot
 from core.views.player_view import PlayerView, Kind
@@ -39,6 +41,16 @@ class Player(ABC):
 
     def __repr__(self) -> str:
         return str(self)
+
+    @final
+    def get_info(self, make_unknown: bool) -> PlayerInfo:
+        return PlayerInfo(
+            self.id,
+            self.position[0],
+            self.position[1],
+            self.kind,
+            {a.copy(make_unknown) for a in self.flock},
+        )
 
     @final
     def distance(self, other: Player) -> float:
