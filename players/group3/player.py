@@ -1,6 +1,5 @@
 import math
 from random import choice, random
-from core.action import Action
 from core.animal import Animal
 from core.message import Message
 from core.player import Player
