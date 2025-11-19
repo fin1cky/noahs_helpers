@@ -27,9 +27,14 @@ class Player3(Player):
         self.caught_species = {}  # {species_id: {'M': bool, 'F': bool}}
         self.last_10_positions = []  # Track last 10 positions to detect stuck state
         self.max_safe_distance = 840  # Max distance from ark to ensure we can return (1008 turns / 1.2 safety)
+        self.first_trip_complete = False  # Track if we've returned to ark at least once
 
     def need_animal(self, species_id: int, gender_name: str) -> bool:
         """Check if we need this species/gender combination."""
+        # Only check for known genders
+        if gender_name not in ["Male", "Female"]:
+            return False  # Can't determine if we need Unknown gender
+
         gender_key = "M" if gender_name == "Male" else "F"
 
         if species_id not in self.caught_species:
@@ -39,6 +44,10 @@ class Player3(Player):
 
     def mark_caught(self, species_id: int, gender_name: str):
         """Mark that we've caught this species/gender."""
+        # Only mark known genders
+        if gender_name not in ["Male", "Female"]:
+            return  # Can't mark Unknown gender
+
         gender_key = "M" if gender_name == "Male" else "F"
 
         if species_id not in self.caught_species:
@@ -158,9 +167,26 @@ class Player3(Player):
             # Each helper gets a unique direction
             self.my_angle = (self.id / self.num_helpers) * 2 * math.pi
 
+        # Detect successful delivery BEFORE updating flock
+        # (flock changes from non-empty to empty when we unload at ark)
+        if snapshot.ark_view is not None:
+            current_cell_x = int(snapshot.position[0])
+            current_cell_y = int(snapshot.position[1])
+            if current_cell_x == self.ark_x and current_cell_y == self.ark_y:
+                # We're at the ark - check if we just unloaded
+                if len(self.flock) > 0 and len(snapshot.flock) == 0:
+                    # Flock went from non-empty to empty = successful delivery
+                    self.first_trip_complete = True
+
         # Update position and flock
         self.position = snapshot.position
         self.flock = snapshot.flock
+
+        # Sync with Ark contents whenever we can see it
+        if snapshot.ark_view is not None:
+            for animal in snapshot.ark_view.animals:
+                # Animals on ark have known genders
+                self.mark_caught(animal.species_id, animal.gender.name)
 
         # Track last 10 positions
         self.last_10_positions.append((self.position[0], self.position[1]))
@@ -185,18 +211,22 @@ class Player3(Player):
             for cell_view in self.snapshot.sight:
                 if cell_view.x == current_cell_x and cell_view.y == current_cell_y:
                     for animal in cell_view.animals:
+                        # Safety check: only catch if gender is known (should always be true in same cell)
+                        if animal.gender.name not in ["Male", "Female"]:
+                            continue  # Skip Unknown genders
+
                         # Check if we need this animal
                         if self.need_animal(animal.species_id, animal.gender.name):
-                            # Mark it as caught and obtain it
+                            # Mark it as caught
                             self.mark_caught(animal.species_id, animal.gender.name)
-                            self.chase_target = None
-                            self.chase_turns = 0
                             return Obtain(animal)
 
-        # If have 4 animals or it's raining, return to ark
-        if len(self.flock) >= 4 or self.snapshot.is_raining:
-            self.chase_target = None
-            self.chase_turns = 0
+        # Return to ark conditions:
+        # - First trip: 2 animals (quick sync with ark)
+        # - Later trips: 4 animals (max capacity)
+        # - Always return if raining
+        target_flock_size = 2 if not self.first_trip_complete else 4
+        if len(self.flock) >= target_flock_size or self.snapshot.is_raining:
             return self.move_toward_ark()
 
         # Check if stuck in same vicinity for last 10 turns
