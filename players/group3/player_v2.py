@@ -30,7 +30,7 @@ class Player3(Player):
 
     def need_animal(self, species_id: int, gender_name: str) -> bool:
         """Check if we need this species/gender combination."""
-        gender_key = 'M' if gender_name == 'Male' else 'F'
+        gender_key = "M" if gender_name == "Male" else "F"
 
         if species_id not in self.caught_species:
             return True
@@ -39,17 +39,19 @@ class Player3(Player):
 
     def mark_caught(self, species_id: int, gender_name: str):
         """Mark that we've caught this species/gender."""
-        gender_key = 'M' if gender_name == 'Male' else 'F'
+        gender_key = "M" if gender_name == "Male" else "F"
 
         if species_id not in self.caught_species:
-            self.caught_species[species_id] = {'M': False, 'F': False}
+            self.caught_species[species_id] = {"M": False, "F": False}
 
         self.caught_species[species_id][gender_key] = True
 
-    def find_needed_animal(self, snapshot: HelperSurroundingsSnapshot) -> tuple[int, int, Animal] | None:
+    def find_needed_animal(
+        self, snapshot: HelperSurroundingsSnapshot
+    ) -> tuple[int, int, Animal] | None:
         """Find closest animal that we need (haven't caught both genders)."""
         best_animal = None
-        best_distance = float('inf')
+        best_distance = float("inf")
 
         for cell_view in snapshot.sight:
             for animal in cell_view.animals:
@@ -73,8 +75,10 @@ class Player3(Player):
                         if distance < best_distance:
                             best_distance = distance
                             best_animal = (cell_view.x, cell_view.y, animal)
-                    elif not (self.caught_species[animal.species_id].get('M', False) and
-                             self.caught_species[animal.species_id].get('F', False)):
+                    elif not (
+                        self.caught_species[animal.species_id].get("M", False)
+                        and self.caught_species[animal.species_id].get("F", False)
+                    ):
                         # Have caught one gender but not both
                         dx = cell_view.x + 0.5 - self.position[0]
                         dy = cell_view.y + 0.5 - self.position[1]
@@ -115,7 +119,7 @@ class Player3(Player):
         # Check if all positions are within 10km radius of centroid
         max_distance_from_center = 0
         for x, y in self.last_10_positions:
-            distance = math.sqrt((x - avg_x)**2 + (y - avg_y)**2)
+            distance = math.sqrt((x - avg_x) ** 2 + (y - avg_y) ** 2)
             max_distance_from_center = max(max_distance_from_center, distance)
 
         # If all positions within 10km radius, we're stuck chasing
@@ -246,7 +250,7 @@ class Player3(Player):
                     if helper_view.id != self.id and helper_view.kind == Kind.Helper:
                         # Another helper is here! Adjust our angle to spread out
                         self.my_angle += math.radians(30)  # Turn 30 degrees
-                        self.my_angle %= (2 * math.pi)
+                        self.my_angle %= 2 * math.pi
                         break
 
         dx = math.cos(self.my_angle)
@@ -296,7 +300,7 @@ class Player3(Player):
 
             # Bounce: reflect our angle toward the ark
             # Add some randomness (±45 degrees) so helpers explore different areas
-            offset = random.uniform(-math.pi/4, math.pi/4)
+            offset = random.uniform(-math.pi / 4, math.pi / 4)
             self.my_angle = ark_angle + offset
 
             # Recalculate move with new angle
