@@ -9,7 +9,7 @@ import core.constants as c
 from players.group1.player import Player1
 from players.group10.player import Player10
 from players.group2.player import Player2
-from players.group3.player import Player3
+from players.group3.player_v2 import Player3
 from players.group4.player import Player4
 from players.group5.player import Player5
 from players.group6.player import Player6

@@ -28,7 +28,11 @@ class Player3(Player):
         self.ark_species: set[Animal] = set()
         self.is_raining = False
         self.hellos_received = []
-        self.angle = math.radians(random() * 360)
+
+        samples, total_weight = self.angle_weights()
+        #self.angle = self.find_angle(samples, total_weight)
+        self.angle = math.radians(random()*random() * 360)
+        
 
     def check_surroundings(self, snapshot: HelperSurroundingsSnapshot) -> int:
         self.position = snapshot.position
@@ -148,3 +152,63 @@ class Player3(Player):
         print("move away")
         self.angle = math.radians(random() * 360)
         return x0, y0
+    
+    def angle_weights(self):
+        num_samples = 360
+        samples = []  
+        cumu = 0.0
+        for i in range(0, num_samples):
+            theta = 2*math.pi* i / num_samples
+            d = self.max_distance_to_boundary(theta)
+            cumu = cumu + d
+            samples.append( (theta, cumu) )
+        tot_wt = cumu
+        return samples, tot_wt
+    
+    def max_distance_to_boundary(self, theta):
+        ark_x = self.ark_position[0]
+        ark_y = self.ark_position[1]
+        dx = math.cos(theta)
+        dy = math.sin(theta)
+
+        t_list = []
+        if dx > 0:
+            t_right = (c.X -ark_x) / dx
+            t_list.append(t_right)
+        elif dx < 0:
+            t_left = (0 - ark_x) / dx
+            t_list.append(t_left)
+        
+        if dy > 0:
+            t_top = (c.Y - ark_y) / dy
+            t_list.append(t_top)
+        elif dy < 0:
+            t_bottom = (0 - ark_y) / dy
+            t_list.append(t_bottom)
+        
+        if len(t_list) == 0:
+            return 0
+        return min(min(t_list), 1008)
+    
+    def find_angle_for_target(self, samples, target):
+        left = 0
+        right = len(samples) - 1
+        while left < right:
+            mid = (left + right) // 2
+            if samples[mid][1] >= target:
+                right = mid
+            else:
+                left = mid + 1
+
+        return samples[left][0]
+    
+    def find_angle(self, samples, total_weight):
+        if self.kind == Kind.Noah:
+            return -100
+        k = self.id - 1
+        print(k)
+        target = total_weight * ((float(k) + 0.5)/ float(self.num_helpers - 1))
+        print(target)
+        theta = self.find_angle_for_target(samples, target)
+        print(theta)
+        return theta
