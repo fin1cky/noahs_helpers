@@ -31,14 +31,16 @@ def get_animals_in_cell_not_in_ark_and_not_in_my_flock(helper_self: Player3, sna
 	if not snapshot.sight.cell_is_in_sight(cell_x, cell_y):
 		return []
 	cell_view = snapshot.sight.get_cellview_at(cell_x, cell_y)
-	cell_animals_all = cell_view.animals
+	cell_animals_all: set[Animal] = cell_view.animals
 	
 	# Get animals already on ark
 	update_ark_memory(helper_self, snapshot)
-	ark_animals_with_gender = helper_self.ark_memory
+	ark_animals_with_gender: set[tuple[int, Gender]] = set()
+	for animal in helper_self.ark_memory:
+		ark_animals_with_gender.add((animal.species_id, animal.gender))
  
 	# Get animals already in our flock
-	flock_animals_with_gender = set()
+	flock_animals_with_gender: set[tuple[int, Gender]] = set()
 	for animal in helper_self.flock:
 		flock_animals_with_gender.add((animal.species_id, animal.gender))
 	
