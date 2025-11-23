@@ -30,8 +30,8 @@ class Player3(Player):
         self.hellos_received = []
 
         samples, total_weight = self.angle_weights()
-        #self.angle = self.find_angle(samples, total_weight)
-        self.angle = math.radians(random()*random() * 360)
+        self.angle = self.find_angle(samples, total_weight)
+        #self.angle = math.radians(random()*random() * 360)
         
 
     def check_surroundings(self, snapshot: HelperSurroundingsSnapshot) -> int:
