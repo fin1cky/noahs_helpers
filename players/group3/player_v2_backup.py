@@ -126,7 +126,9 @@ class Player3(Player):
         closest_dist = -1
         closest_pos = None
         for cellview in self.sight:
-            if len(cellview.animals) > 0 and not self.is_animal_likely_in_flock(cellview):
+            if len(cellview.animals) > 0 and not self.is_animal_likely_in_flock(
+                cellview
+            ):
                 dist = distance(*self.position, cellview.x, cellview.y)
                 if closest_animal is None or dist < closest_dist:
                     closest_animal = choice(tuple(cellview.animals))
