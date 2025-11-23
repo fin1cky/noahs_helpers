@@ -28,6 +28,7 @@ class Player3(Player):
         self.last_10_positions = []  # Track last 10 positions to detect stuck state
         self.max_safe_distance = 840  # Max distance from ark to ensure we can return (1008 turns / 1.2 safety)
         self.first_trip_complete = False  # Track if we've returned to ark at least once
+        self.ark_memory: set[Animal] = set()  # Memory of animals on ark
 
     def need_animal(self, species_id: int, gender_name: str) -> bool:
         """Check if we need this species/gender combination."""
