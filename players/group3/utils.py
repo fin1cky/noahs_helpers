@@ -17,6 +17,7 @@ def update_ark_memory(helper_self: Player3, snapshot: HelperSurroundingsSnapshot
 	
 	# Update memory
 	helper_self.ark_memory = snapshot.ark_view.animals.copy()
+	print(f"Ark memory updated: {len(helper_self.ark_memory)} animals remembered.")
 
 def get_animals_in_cell_not_in_ark_and_not_in_my_flock(helper_self: Player3, snapshot: HelperSurroundingsSnapshot) -> list[Animal]:
 	"""Get animals in current cell that we should pick up. Note that since this is for the current cell, we know the genders of all the animals."""

@@ -7,6 +7,7 @@ from core.snapshots import HelperSurroundingsSnapshot
 from core.views.cell_view import CellView
 from core.views.player_view import Kind
 from core.action import Action, Move, Obtain
+from players.group3 import utils
 import core.constants as c
 
 
@@ -29,6 +30,7 @@ class Player3(Player):
         self.is_raining = False
         self.hellos_received = []
         self.angle = math.radians(random() * 360)
+        self.ark_memory: set[Animal] = set()
 
     def check_surroundings(self, snapshot: HelperSurroundingsSnapshot) -> int:
         self.position = snapshot.position
@@ -99,7 +101,7 @@ class Player3(Player):
             return Obtain(animal_to_obtain)
 
         # If I see any animals, I'll chase the closest one
-        closest_animal = self._find_closest_animal()
+        closest_animal = self._find_closest_desirable_animal()
         if closest_animal:
             dist_animal = distance(*self.position, *closest_animal)
             if dist_animal > 0.01 and dist_animal <= 3:
@@ -121,7 +123,7 @@ class Player3(Player):
 
         return self.sight.get_cellview_at(xcell, ycell)
 
-    def _find_closest_animal(self) -> tuple[int, int] | None:
+    def _find_closest_desirable_animal(self) -> tuple[int, int] | None:
         closest_animal = None
         closest_dist = -1
         closest_pos = None
@@ -129,7 +131,16 @@ class Player3(Player):
             if len(cellview.animals) > 0 and not self.is_animal_likely_in_flock(cellview):
                 dist = distance(*self.position, cellview.x, cellview.y)
                 if closest_animal is None or dist < closest_dist:
-                    closest_animal = choice(tuple(cellview.animals))
+                    desirable_animals = []
+                    for animal in cellview.animals:
+                        if utils.should_pursue_animal(self, animal): # type: ignore
+                            desirable_animals.append(animal)
+                        else:
+                            print(f"Not pursuing animal {animal.species_id} as both genders are already in ark.")
+                    # closest_animal = choice(tuple(cellview.animals))
+                    if len(desirable_animals) == 0:
+                        continue
+                    closest_animal = choice(tuple(desirable_animals))
                     closest_dist = dist
                     closest_pos = (cellview.x, cellview.y)
 
