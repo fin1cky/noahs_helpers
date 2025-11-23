@@ -1,6 +1,6 @@
 import math
 from random import choice, random
-from core.animal import Animal
+from core.animal import Animal, Gender
 from core.message import Message
 from core.player import Player
 from core.snapshots import HelperSurroundingsSnapshot
@@ -30,13 +30,11 @@ class Player3(Player):
         self.is_raining = False
         self.hellos_received = []
         self.angle = math.radians(random() * 360)
-        self.ark_memory: set[Animal] = set()
 
     def check_surroundings(self, snapshot: HelperSurroundingsSnapshot) -> int:
         self.position = snapshot.position
         self.flock = snapshot.flock
-        if snapshot.ark_view:
-            self.ark_species.update(snapshot.flock)
+        self.update_ark_memory(snapshot)
 
         self.sight = snapshot.sight
         self.is_raining = snapshot.is_raining
@@ -133,7 +131,7 @@ class Player3(Player):
                 if closest_animal is None or dist < closest_dist:
                     desirable_animals = []
                     for animal in cellview.animals:
-                        if utils.should_pursue_animal(self, animal): # type: ignore
+                        if self.should_pursue_animal(animal): # type: ignore
                             desirable_animals.append(animal)
                         else:
                             print(f"Not pursuing animal {animal.species_id} as both genders are already in ark.")
@@ -212,3 +210,25 @@ class Player3(Player):
                 free_animals.add(animal)
 
         return free_animals
+
+    
+    def update_ark_memory(self, snapshot: HelperSurroundingsSnapshot) -> None:
+        """Update our memory of animals on the ark"""
+        # If no ark view, do nothing
+        if snapshot.ark_view is None:
+            return None
+        
+        # Update memory
+        self.ark_species = snapshot.ark_view.animals.copy()
+        print(f"Ark memory updated: {len(self.ark_species)} animals remembered.")
+        
+    
+    def should_pursue_animal(self, animal: Animal) -> bool:
+        """Decide whether to pursue a given animal based on whether it is already in the ark."""
+        ark_animals_with_gender: set[tuple[int, Gender]] = set()
+        for animal in self.ark_species or []:
+            ark_animals_with_gender.add((animal.species_id, animal.gender))
+    
+        if (animal.species_id, Gender.Male) in ark_animals_with_gender and (animal.species_id, Gender.Female) in ark_animals_with_gender:
+            return False  # Both
+        return True
