@@ -54,3 +54,13 @@ def get_animals_in_cell_not_in_ark_and_not_in_my_flock(helper_self: Player3, sna
 		should_obtain.append(animal)
 	
 	return should_obtain
+
+def should_pursue_animal(helper_self: Player3, animal: Animal) -> bool:
+	"""Decide whether to pursue a given animal based on whether it is already in the ark."""
+	ark_animals_with_gender: set[tuple[int, Gender]] = set()
+	for animal in helper_self.ark_memory:
+		ark_animals_with_gender.add((animal.species_id, animal.gender))
+  
+	if (animal.species_id, Gender.Male) in ark_animals_with_gender and (animal.species_id, Gender.Female) in ark_animals_with_gender:
+		return False  # Both
+	return True
