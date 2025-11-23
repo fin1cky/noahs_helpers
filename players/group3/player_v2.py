@@ -6,7 +6,7 @@ from core.player import Player
 from core.snapshots import HelperSurroundingsSnapshot
 from core.views.cell_view import CellView
 from core.views.player_view import Kind
-from core.action import Action, Move, Obtain
+from core.action import Action, Move, Obtain, Release
 from players.group3 import utils
 import core.constants as c
 
@@ -30,11 +30,18 @@ class Player3(Player):
         self.is_raining = False
         self.hellos_received = []
         self.angle = math.radians(random() * 360)
+        self.cooldowns = {}
 
     def check_surroundings(self, snapshot: HelperSurroundingsSnapshot) -> int:
         self.position = snapshot.position
         self.flock = snapshot.flock
         self.update_ark_memory(snapshot)
+        for (animal_id, cooldown) in self.cooldowns.items():
+            if cooldown > 0:
+                self.cooldowns[animal_id] = cooldown - 1
+        for animal_id in list(self.cooldowns.keys()):
+            if self.cooldowns[animal_id] == 0:
+                del self.cooldowns[animal_id]
 
         self.sight = snapshot.sight
         self.is_raining = snapshot.is_raining
@@ -67,6 +74,15 @@ class Player3(Player):
         # If it's raining, go to ark
         if self.is_raining:
             return Move(*self.move_towards(*self.ark_position))
+        
+        # If I am holding an animal that exists in my ark memory, drop it and add a cooldown
+        ark_memory_info = set()
+        for animal in self.ark_species or []:
+            ark_memory_info.add((animal.species_id, animal.gender))
+        for animal in self.flock:
+            if (animal.species_id, animal.gender) in ark_memory_info:
+                self.cooldowns[animal.species_id] = 20  # e.g., 5 turns cooldown
+                return Release(animal)  # Drop the animal
 
         # if self.is_flock_full():
         #     return Move(*self.move_towards(*self.ark_position))
@@ -193,6 +209,7 @@ class Player3(Player):
         1. Are not already in the ark
         2. Are not in my own flock
         3. Are not in a cell with other helpers (likely in their flock)
+        4. Are not on cooldown from being recently dropped
 
         Args:
             cellview: The cell to check
@@ -203,11 +220,14 @@ class Player3(Player):
         if self.is_animal_likely_in_flock(cellview):
             return set()
 
-        # Filter out animals already in ark or in my flock
+        # Filter out animals already in ark or in my flock and those on cooldown
         free_animals = set()
         for animal in cellview.animals:
             if animal not in self.ark_species and animal not in self.flock:
-                free_animals.add(animal)
+                if animal.species_id not in self.cooldowns:
+                    free_animals.add(animal)
+                else:
+                    print(f"Animal {animal.species_id} skipped: on cooldown.")
 
         return free_animals
 
@@ -220,7 +240,7 @@ class Player3(Player):
         
         # Update memory
         self.ark_species = snapshot.ark_view.animals.copy()
-        print(f"Ark memory updated: {len(self.ark_species)} animals remembered.")
+        # print(f"Ark memory updated: {len(self.ark_species)} animals remembered.")
         
     
     def should_pursue_animal(self, animal: Animal) -> bool:
@@ -231,4 +251,7 @@ class Player3(Player):
     
         if (animal.species_id, Gender.Male) in ark_animals_with_gender and (animal.species_id, Gender.Female) in ark_animals_with_gender:
             return False  # Both
+        if animal.species_id in self.cooldowns:
+            print(f"Animal {animal.species_id} skipped: on cooldown.")
+            return False  # On cooldown
         return True
