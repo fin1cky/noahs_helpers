@@ -2,7 +2,6 @@ from core.animal import Animal, Gender
 from core.snapshots import HelperSurroundingsSnapshot
 
 
-
 def get_animals_in_cell_not_in_ark_and_not_in_my_flock(
     helper_self, snapshot: HelperSurroundingsSnapshot
 ) -> list[Animal]:
