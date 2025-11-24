@@ -7,7 +7,6 @@ from core.snapshots import HelperSurroundingsSnapshot
 from core.views.cell_view import CellView
 from core.views.player_view import Kind
 from core.action import Action, Move, Obtain, Release
-from players.group3 import utils
 import core.constants as c
 
 

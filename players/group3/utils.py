@@ -1,12 +1,6 @@
-from random import choice, random
 from core.animal import Animal, Gender
-from core.message import Message
-from core.player import Player
 from core.snapshots import HelperSurroundingsSnapshot
-from core.views.cell_view import CellView
-from core.views.player_view import Kind
-from core.action import Action, Move, Obtain
-import core.constants as c
+
 
 
 def get_animals_in_cell_not_in_ark_and_not_in_my_flock(
