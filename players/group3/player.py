@@ -32,6 +32,8 @@ class Player3(Player):
         samples, total_weight = self.angle_weights()
         self.angle = self.find_angle(samples, total_weight)
         self.cooldowns = {}
+        self.days_remaining = 1008
+        self.next_move = 0
 
     def check_surroundings(self, snapshot: HelperSurroundingsSnapshot) -> int:
         self.position = snapshot.position
@@ -74,8 +76,17 @@ class Player3(Player):
 
         # If it's raining, go to ark
         if self.is_raining:
-            return Move(*self.move_towards(*self.ark_position))
-
+            self.days_remaining -= 1
+            if distance(*self.position, self.ark_position[0], self.ark_position[1]) >= self.days_remaining - 12:
+                # move towards ark if we need a lot of steps to get to ark
+                # otherwise keep searching
+                if self.next_move > 0:
+                    self.next_move -= 1
+                return Move(*self.move_towards(*self.ark_position))
+        
+        if self.next_move > 0:
+            self.next_move -= 1
+            return Move(*self.move_dir())
         # If I am holding an animal that exists in my ark memory, drop it and add a cooldown
         ark_memory_info = set()
         for animal in self.ark_species or []:
@@ -83,6 +94,8 @@ class Player3(Player):
         for animal in self.flock:
             if (animal.species_id, animal.gender) in ark_memory_info:
                 self.cooldowns[animal.species_id] = 20  # e.g., 5 turns cooldown
+                self.angle = math.radians(random() * 360)
+                self.next_move = 5
                 return Release(animal)  # Drop the animal
 
         # if self.is_flock_full():
@@ -103,7 +116,7 @@ class Player3(Player):
         # don't move too far from the ark
         if distance(*self.position, self.ark_position[0], self.ark_position[1]) >= 1007:
             self.angle = math.radians(random() * 360)
-            print("distance too far")
+            #print("distance too far")
             return Move(*self.move_towards(*self.ark_position))
 
         cellview = self._get_my_cell()
@@ -119,7 +132,7 @@ class Player3(Player):
         closest_animal = self._find_closest_desirable_animal()
         if closest_animal:
             dist_animal = distance(*self.position, *closest_animal)
-            if dist_animal > 0.01 and dist_animal <= 3:
+            if dist_animal > 0.01:
                 print("move towards animal")
                 # This means the random_player will even approach
                 # animals in other helpers' flocks
@@ -175,7 +188,7 @@ class Player3(Player):
         if self.can_move_to(x1, y1):
             # print(x1, y1)
             return x1, y1
-        print("move away")
+        #print("move away")
         self.angle = math.radians(random() * 360)
         return x0, y0
 
