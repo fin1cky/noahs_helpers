@@ -102,7 +102,8 @@ class Player3(Player):
         #     return Move(*self.move_towards(*self.ark_position))
 
         # If I have obtained an animal, go to ark
-        if not self.is_flock_empty():
+        # if not self.is_flock_empty():
+        if self.is_flock_full():
         # if len(self.flock) >= 4:
             return Move(*self.move_towards(*self.ark_position))
 
@@ -126,7 +127,8 @@ class Player3(Player):
         free_animals = self.get_free_animals_in_cell(cellview)
         if len(free_animals) > 0:
             animal_to_obtain = choice(tuple(free_animals))
-            print("obtained free animal")
+            print(f"Helper {self.id}: Obtained animal into flock")
+            print(f"Helper {self.id}: New flock size: {len(self.flock)+1}")
             return Obtain(animal_to_obtain)
 
         # If I see any animals, I'll chase the closest one
@@ -134,7 +136,7 @@ class Player3(Player):
         if closest_animal:
             dist_animal = distance(*self.position, *closest_animal)
             if dist_animal > 0.01:
-                print("move towards animal")
+                # print(f"Helper {self.id}: Moving towards animal")
                 # This means the random_player will even approach
                 # animals in other helpers' flocks
                 return Move(*self.move_towards(*closest_animal))
@@ -153,6 +155,9 @@ class Player3(Player):
         return self.sight.get_cellview_at(xcell, ycell)
 
     def _find_closest_desirable_animal(self) -> tuple[int, int] | None:
+        cur_flock_animal_types = set()
+        for animal in self.flock:
+            cur_flock_animal_types.add(animal.species_id)
         closest_animal = None
         closest_dist = -1
         closest_pos = None
@@ -164,12 +169,14 @@ class Player3(Player):
                 if closest_animal is None or dist < closest_dist:
                     desirable_animals = []
                     for animal in cellview.animals:
-                        if self.should_pursue_animal(animal):  # type: ignore
-                            desirable_animals.append(animal)
-                        else:
-                            print(
-                                f"Not pursuing animal {animal.species_id} as both genders are already in ark."
-                            )
+                        if not self.should_pursue_animal(animal):  # type: ignore
+                            print(f"Not pursuing animal {animal.species_id} as both genders are already in ark.")
+                            continue
+                        if animal.species_id in cur_flock_animal_types:
+                            print(f"Not pursuing animal {animal.species_id} as it's already in flock.")
+                            continue
+                        # print(f"Helper {self.id}: Considering animal {animal.species_id} at cell ({cellview.x}, {cellview.y})")
+                        desirable_animals.append(animal)
                     # closest_animal = choice(tuple(cellview.animals))
                     if len(desirable_animals) == 0:
                         continue
