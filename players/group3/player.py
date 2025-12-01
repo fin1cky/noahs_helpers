@@ -103,6 +103,7 @@ class Player3(Player):
 
         # If I have obtained an animal, go to ark
         if not self.is_flock_empty():
+        # if len(self.flock) >= 4:
             return Move(*self.move_towards(*self.ark_position))
 
         # If I've reached an animal, I'll obtain it
@@ -114,7 +115,7 @@ class Player3(Player):
             return Obtain(random_animal) """
 
         # don't move too far from the ark
-        if distance(*self.position, self.ark_position[0], self.ark_position[1]) >= 1007:
+        if distance(*self.position, self.ark_position[0], self.ark_position[1]) >= 997:
             self.angle = math.radians(random() * 360)
             #print("distance too far")
             return Move(*self.move_towards(*self.ark_position))
