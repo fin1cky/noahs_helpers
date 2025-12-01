@@ -77,13 +77,16 @@ class Player3(Player):
         # If it's raining, go to ark
         if self.is_raining:
             self.days_remaining -= 1
-            if distance(*self.position, self.ark_position[0], self.ark_position[1]) >= self.days_remaining - 12:
+            if (
+                distance(*self.position, self.ark_position[0], self.ark_position[1])
+                >= self.days_remaining - 12
+            ):
                 # move towards ark if we need a lot of steps to get to ark
                 # otherwise keep searching
                 if self.next_move > 0:
                     self.next_move -= 1
                 return Move(*self.move_towards(*self.ark_position))
-        
+
         if self.next_move > 0:
             self.next_move -= 1
             return Move(*self.move_dir())
@@ -104,7 +107,7 @@ class Player3(Player):
         # If I have obtained an animal, go to ark
         # if not self.is_flock_empty():
         if self.is_flock_full():
-        # if len(self.flock) >= 4:
+            # if len(self.flock) >= 4:
             return Move(*self.move_towards(*self.ark_position))
 
         # If I've reached an animal, I'll obtain it
@@ -118,7 +121,7 @@ class Player3(Player):
         # don't move too far from the ark
         if distance(*self.position, self.ark_position[0], self.ark_position[1]) >= 997:
             self.angle = math.radians(random() * 360)
-            #print("distance too far")
+            # print("distance too far")
             return Move(*self.move_towards(*self.ark_position))
 
         cellview = self._get_my_cell()
@@ -128,7 +131,7 @@ class Player3(Player):
         if len(free_animals) > 0:
             animal_to_obtain = choice(tuple(free_animals))
             print(f"Helper {self.id}: Obtained animal into flock")
-            print(f"Helper {self.id}: New flock size: {len(self.flock)+1}")
+            print(f"Helper {self.id}: New flock size: {len(self.flock) + 1}")
             return Obtain(animal_to_obtain)
 
         # If I see any animals, I'll chase the closest one
@@ -170,10 +173,14 @@ class Player3(Player):
                     desirable_animals = []
                     for animal in cellview.animals:
                         if not self.should_pursue_animal(animal):  # type: ignore
-                            print(f"Not pursuing animal {animal.species_id} as both genders are already in ark.")
+                            print(
+                                f"Not pursuing animal {animal.species_id} as both genders are already in ark."
+                            )
                             continue
                         if animal.species_id in cur_flock_animal_types:
-                            print(f"Not pursuing animal {animal.species_id} as it's already in flock.")
+                            print(
+                                f"Not pursuing animal {animal.species_id} as it's already in flock."
+                            )
                             continue
                         # print(f"Helper {self.id}: Considering animal {animal.species_id} at cell ({cellview.x}, {cellview.y})")
                         desirable_animals.append(animal)
@@ -196,7 +203,7 @@ class Player3(Player):
         if self.can_move_to(x1, y1):
             # print(x1, y1)
             return x1, y1
-        #print("move away")
+        # print("move away")
         self.angle = math.radians(random() * 360)
         return x0, y0
 
