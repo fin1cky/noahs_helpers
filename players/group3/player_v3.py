@@ -65,43 +65,6 @@ class Player3(Player):
             msg = msg & 0xFF
 
         return msg
-    
-    def check_for_duplicate_species_pairs(self) -> set[int]:
-        """
-        Check if another helper with lower ID has the same species pair.
-        Returns set of all species_ids that should be released, or empty set if none.
-        
-        Logic: If both helpers have 2 animals of the same species, those animals
-        MUST be opposite genders (M+F pair). The helper with higher ID releases both.
-        """
-        my_species_count = {}
-        for animal in self.flock:
-            my_species_count[animal.species_id] = my_species_count.get(animal.species_id, 0) + 1
-        
-        my_species_pairs = {species_id for species_id, count in my_species_count.items() if count == 2}
-
-        if not my_species_pairs:
-            return set()
-        
-        all_duplicate_pairs = set()
-
-        for cellview in self.sight:
-            other_helpers = [helper for helper in cellview.helpers if helper.id != self.id and helper.id < self.id]
-
-            if not other_helpers or not cellview.animals:
-                continue
-
-            cell_species_count = {}
-            for animal in cellview.animals:
-                cell_species_count[animal.species_id] = cell_species_count.get(animal.species_id, 0) + 1
-
-            other_helper_pairs = {species_id for species_id, count in cell_species_count.items() if count == 2}
-
-            duplicate_pairs = my_species_pairs.intersection(other_helper_pairs)
-
-            all_duplicate_pairs.update(duplicate_pairs)
-
-        return all_duplicate_pairs
 
     def get_action(self, messages: list[Message]) -> Action | None:
         for msg in messages:
@@ -110,19 +73,6 @@ class Player3(Player):
         # noah shouldn't do anything
         if self.kind == Kind.Noah:
             return None
-        
-        duplicate_species_to_release = self.check_for_duplicate_species_pairs()
-        if duplicate_species_to_release:
-            for animal in self.flock:
-                if animal.species_id in duplicate_species_to_release:
-                    print(f"Helper {self.id}: Releasing duplicate species {animal.species_id} - lower ID helper will deliver")
-                    
-                    # Add both genders of this species to ark memory
-                    # since we know the lower-ID helper WILL deliver them
-                    self.ark_species.add(Animal(animal.species_id, Gender.Male))
-                    self.ark_species.add(Animal(animal.species_id, Gender.Female))
-                    
-                    return Release(animal)
 
         # If it's raining, go to ark
         if self.is_raining:
